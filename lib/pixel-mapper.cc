@@ -213,10 +213,44 @@ public:
     *matrix_y = base_y + y;
   }
 
-private:
+protected:
   int parallel_;
 };
 
+// chain that is counter clockwise from the pi...
+// the idc connectors on my 64x64 panels are much easier with
+// this arrangment.
+//    [<][<][<][<] }- Raspbery Pi connector
+// becomes
+//    [>][>]
+//    [<][<] }----- Raspberry Pi connector
+class UArrangementMapperClockwise : public UArrangementMapper {
+public:
+  UArrangementMapperClockwise() : UArrangementMapper() {}
+
+  virtual const char *GetName() const { return "CWU-mapper"; }
+
+  virtual void MapVisibleToMatrix(int matrix_width, int matrix_height,
+    int x, int y,
+    int *matrix_x, int *matrix_y) const {
+    const int panel_height = matrix_height / parallel_;
+    const int visible_width = (matrix_width / 64) * 32;
+    const int slab_height = 2 * panel_height;   // one folded u-shape
+    const int base_y = (y / slab_height) * panel_height;
+    y %= slab_height;
+    if (y < panel_height) {
+      // the second half is the top. needs to be flipped...
+      // y coordinates need to be in the range [0, panel_height)
+      x = visible_width - x - 1;
+      y = panel_height - y - 1;
+    } else {
+      x += matrix_width / 2;
+      y %= panel_height;
+    }
+    *matrix_x = x;
+    *matrix_y = base_y + y;
+  }
+};
 
 
 class VerticalMapper : public PixelMapper {
@@ -302,6 +336,7 @@ static MapperByName *CreateMapperMap() {
   RegisterPixelMapperInternal(result, new UArrangementMapper());
   RegisterPixelMapperInternal(result, new VerticalMapper());
   RegisterPixelMapperInternal(result, new MirrorPixelMapper());
+  RegisterPixelMapperInternal(result, new UArrangementMapperClockwise());
   return result;
 }
 
